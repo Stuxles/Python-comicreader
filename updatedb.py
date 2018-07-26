@@ -9,7 +9,7 @@ db = sqlite3.connect('data/mydb')
 # thumbnail size
 thumbsize = 230, 230
 # folder where comics are stored
-comicfolder = 'test/'
+comicfolder = 'test2/'
 
 cursor = db.cursor()
 # create table query and execute
@@ -47,16 +47,22 @@ def addcomic(cbzfile):
                 elements.append(thing.tag)
                 values.append(thing.text)
 
-    # the first image in the zip file is opened
-    image = zips.open(imagelist[0])
+    # The first image is extracted to a temporary folder
+    imageex = zips.extract(imagelist[0], 'cache/temp')
+
+    ## the first image in the zip file is opened
+    ## image = zips.open(imagelist[0])
+
     # open the image as an image with pillow
-    orig = Image.open(image)
+    orig = Image.open(imageex)
     # image is converted to RGB as to remove the alphachannel if present
     orig = orig.convert("RGB")
     # create thumbnail with desired size while keeping the correct aspect ratio
     orig.thumbnail(thumbsize)
     # save the image as jpeg with a temporary filename
     orig.save('cache/temp.jpg', "JPEG")
+    # The original image is removed from the temporary folder
+    os.remove(imageex)
 
     # make a string from the list of elements
     elementstring = ','.join(str(x) for x in elements)

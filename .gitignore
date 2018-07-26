@@ -125,3 +125,5 @@ testcomics/
 test2/
 testc/
 problems/
+cache/
+data/mydb
