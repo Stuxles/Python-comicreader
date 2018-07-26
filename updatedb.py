@@ -9,7 +9,7 @@ db = sqlite3.connect('data/mydb')
 # thumbnail size
 thumbsize = 230, 230
 # folder where comics are stored
-comicfolder = 'test2/'
+comicfolder = 'problems/'
 
 cursor = db.cursor()
 # create table query and execute
@@ -27,7 +27,6 @@ def addcomic(cbzfile):
     # 2 lists are generated which already include the filename and modification date
     elements = list(('Filename','ModDate'))
     values = list((cbzfile,os.path.getmtime(comicfolder+cbzfile)))
-    print(cbzfile)
     # a local list is created with all the files in this zip
     imagelist = zips.namelist()
     # check if comicinfo.xml is in the zip
@@ -50,8 +49,9 @@ def addcomic(cbzfile):
     # The first image is extracted to a temporary folder
     imageex = zips.extract(imagelist[0], 'cache/temp')
 
-    ## the first image in the zip file is opened
-    ## image = zips.open(imagelist[0])
+    # TODO: Reimplement method without extracting the image
+    # the first image in the zip file is opened
+    # ! image = zips.open(imagelist[0])
 
     # open the image as an image with pillow
     orig = Image.open(imageex)
@@ -66,12 +66,13 @@ def addcomic(cbzfile):
 
     # make a string from the list of elements
     elementstring = ','.join(str(x) for x in elements)
-    # make a string from the list of values and putting quest around them
-    valuestring = '","'.join(str(x) for x in values)
-    # create sql query to insert data in the table
-    sql = f'''INSERT INTO comics({elementstring}) VALUES("{valuestring}")'''
+
+    placeholder= '?' # For SQLite. See DBAPI paramstyle.
+    placeholders= ', '.join([placeholder]*len(values))
+    query= f'INSERT INTO comics({elementstring}) VALUES(%s)' % placeholders
+
     # execution of the insert query
-    cursor.execute(sql)
+    cursor.execute(query,values)
     # getting the id from the row that was just inserted
     lastid = cursor.lastrowid
     # the thumbnail gets renamed to the row id
