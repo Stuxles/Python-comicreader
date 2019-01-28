@@ -3,13 +3,14 @@ import xml.etree.ElementTree as ET
 import os
 import sqlite3
 from PIL import Image
+import re
 
 # database connection
 db = sqlite3.connect('data/mydb')
 # thumbnail size
 thumbsize = 230, 230
 # folder where comics are stored
-comicfolder = 'problems/'
+comicfolder = 'testcomics/'
 
 cursor = db.cursor()
 # create table query and execute
@@ -34,11 +35,23 @@ def addcomic(cbzfile):
         # remove comicinfo.xml from the local list of filenames
         imagelist.remove('ComicInfo.xml')
         # open comicinfo.xml
-        file = zips.open('ComicInfo.xml')
+        file = zips.open('ComicInfo.xml', 'r')
+
+        fileString = file.read()
+        file.close()
+
+        # tostring test instead of parse file
+        xml_cleaned = re.sub(b'(&(?!amp;))',b'&amp;',fileString)
+        # xml_cleaned = re.sub(b'(?<=<Title>)(.*)(&(?!amp;))(.*)(?=\<\/Title>)',b'\g<2>&amp;',fileString)
+        # xml_cleaned = re.sub(b'(?<=<Title>)(.*)(<(?!lt;))(.*)(?=\<\/Title>)',b'\g<2>&lt;',fileString)
+        # xml_cleaned = re.sub(b'(?<=<Title>)(.*)(>(?!gt;))(.*)(?=\<\/Title>)',b'\g<2>&gt;',fileString)
+        root = ET.fromstring(xml_cleaned)
+
         # parse xml to elemnttree instance
-        tree = ET.parse(file)
+        # tree = ET.parse(file)
         # get the root of the xml file
-        root = tree.getroot()
+        # root = tree.getroot()
+
         # loop through (almost) all elements in the xml file
         for thing in root:
             # add element names to the element list and values to the value list, this excludes the pages element
