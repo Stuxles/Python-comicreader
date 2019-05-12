@@ -8,7 +8,7 @@ import re
 
 DB = sqlite3.connect('data/mydb')
 
-COMICFOLDER = 'testcomics/'
+COMICFOLDER = 'comics/'
 
 COMICNAME = ''
 COMICMOD = ''
@@ -30,12 +30,16 @@ CURSOR.execute('''CREATE TABLE IF NOT EXISTS"comics" ( `id` INTEGER PRIMARY KEY 
 # the changes get commited
 DB.commit()
 
+CURSOR.execute("select MAX(id) from comics")
+numrows = CURSOR.fetchone()
+
 def files():
     """generates list of files in comicfolder"""
     # Loop for every file in comic folder
     for file in os.listdir(COMICFOLDER):
         if os.path.isfile(os.path.join(COMICFOLDER, file)):
             yield file
+
 
 def parse_subject(to_parse, manual):
     """parses comicinfo.xml"""
@@ -47,25 +51,25 @@ def parse_subject(to_parse, manual):
             values.append(" ")
         else:
             values.append(subject_parsed.group(1))
-    if manual == False:
+    if manual is False:
         update_to_db(values)
     add_to_db(values)
 
 
 def add_to_db(dbvalues):
     """adds info to db"""
-    dbvalues.insert(0,COMICNAME)
-    dbvalues.insert(1,COMICMOD)
+    dbvalues.insert(0, COMICNAME)
+    dbvalues.insert(1, COMICMOD)
     placeholder = '?'
     placeholders = ', '.join([placeholder]*len(dbvalues))
     CURSOR.execute("INSERT INTO comics(Filename,ModDate," + ELEMENTSTRING +") VALUES("+ placeholders +")",
                    (dbvalues))
 
+
 def update_to_db(dbvalues):
     """updates info to db"""
-    CURSOR.execute("DELETE FROM comics WHERE Filename = ?",(COMICNAME,))
-    # nicer as update
-    
+    CURSOR.execute("DELETE FROM comics WHERE Filename = ?", (COMICNAME,))
+    # nicer as an update
 
 for comic in files():
     MANUAL = True
@@ -84,7 +88,7 @@ for comic in files():
             with zip_file.open('ComicInfo.xml') as xml_file:
                 parse_subject(xml_file, MANUAL)
         else:
-            if MANUAL == False:
+            if MANUAL is False:
                 dbvalues = [COMICMOD, COMICNAME]
                 CURSOR.execute("UPDATE comics SET ModDate = ? WHERE Filename = ? ",(dbvalues))
             else:
