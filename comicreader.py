@@ -9,6 +9,7 @@ import re
 DB = sqlite3.connect('data/mydb')
 
 COMICFOLDER = 'comics/'
+CACHEFOLDER = 'cache/'
 
 COMICNAME = ''
 COMICMOD = ''
