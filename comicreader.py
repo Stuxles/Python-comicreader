@@ -30,8 +30,11 @@ CURSOR.execute('''CREATE TABLE IF NOT EXISTS"comics" ( `id` INTEGER PRIMARY KEY 
 # the changes get commited
 DB.commit()
 
+# create numrows variable at start of code to get the number of rows before inserting
 CURSOR.execute("select MAX(id) from comics")
-numrows = CURSOR.fetchone()
+numrows = CURSOR.fetchone()[0]
+if numrows is None:
+    numrows = 0
 
 def files():
     """generates list of files in comicfolder"""
