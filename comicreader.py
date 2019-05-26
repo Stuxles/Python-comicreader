@@ -1,15 +1,20 @@
 """
 comicreader
 """
-import os
+import glob, os
 from zipfile import ZipFile
 import sqlite3
 import re
+from PIL import Image
 
 DB = sqlite3.connect('data/mydb')
 
 COMICFOLDER = 'comics/'
 CACHEFOLDER = 'cache/'
+
+THUMBNAILSIZE = 256, 256
+
+NUMROWS = ''
 
 COMICNAME = ''
 COMICMOD = ''
@@ -33,9 +38,11 @@ DB.commit()
 
 # create numrows variable at start of code to get the number of rows before inserting
 CURSOR.execute("select MAX(id) from comics")
-numrows = CURSOR.fetchone()[0]
-if numrows is None:
-    numrows = 0
+NUMROWS = CURSOR.fetchone()[0]
+if NUMROWS is None:
+    NUMROWS = 0
+else:
+    NUMROWS = NUMROWS + 1
 
 def files():
     """generates list of files in comicfolder"""
@@ -57,33 +64,49 @@ def parse_subject(to_parse, manual):
             values.append(subject_parsed.group(1))
     if manual is False:
         update_to_db(values)
-    add_to_db(values)
+    else:
+        add_to_db(values)
 
 
 def add_to_db(dbvalues):
     """adds info to db"""
-    dbvalues.insert(0, COMICNAME)
-    dbvalues.insert(1, COMICMOD)
+    dbvalues.insert(0, NUMROWS)
+    dbvalues.insert(1, COMICNAME)
+    dbvalues.insert(2, COMICMOD)
     placeholder = '?'
     placeholders = ', '.join([placeholder]*len(dbvalues))
-    CURSOR.execute("INSERT INTO comics(Filename,ModDate," + ELEMENTSTRING +") VALUES("+ placeholders +")",
+    CURSOR.execute("INSERT INTO comics(id,Filename,ModDate," + ELEMENTSTRING +") VALUES("+ placeholders +")",
                    (dbvalues))
 
 
 def update_to_db(dbvalues):
     """updates info to db"""
-    CURSOR.execute("DELETE FROM comics WHERE Filename = ?", (COMICNAME,))
-    # nicer as an update
+    CURSOR.execute("UPDATE comics SET ModDate = ? WHERE Filename = ?",(COMICMOD, COMICNAME))
+
+def create_thumbnail(zip, manual):
+    """takes the dirst file in a document and makes a thumbnail of it"""
+    if(zip_file.namelist()[0] == 'ComicInfo.xml'):
+        CACHEIMAGE = zip_file.namelist()[1]
+    else:
+        CACHEIMAGE = zip_file.namelist()[0]
+
+    with zip_file.open(CACHEIMAGE) as file:
+        img = Image.open(file,'r')
+        img.thumbnail(THUMBNAILSIZE)
+        if manual is False:
+            img.save(CACHEFOLDER + str(CHECKS[0]) + ".png", "PNG")
+        else:
+            img.save(CACHEFOLDER + str(NUMROWS) + ".png", "PNG")
 
 for comic in files():
     MANUAL = True
     COMICNAME = comic
     COMICMOD = os.path.getmtime(COMICFOLDER+comic)
-    CURSOR.execute("select Filename,ModDate from comics where Filename=? order by ModDate desc", (COMICNAME,))
+    CURSOR.execute("select id,Filename,ModDate from comics where Filename=? order by ModDate desc", (COMICNAME,))
     CHECKS = CURSOR.fetchone()
     if CHECKS is not None:
-        if CHECKS[0] == COMICNAME:
-            if CHECKS[1] == COMICMOD:
+        if CHECKS[1] == COMICNAME:
+            if CHECKS[2] == COMICMOD:
                 continue
             else:
                 MANUAL = False
@@ -96,7 +119,12 @@ for comic in files():
                 dbvalues = [COMICMOD, COMICNAME]
                 CURSOR.execute("UPDATE comics SET ModDate = ? WHERE Filename = ? ",(dbvalues))
             else:
-                dbvalues = [COMICNAME, COMICMOD]
-                CURSOR.execute("INSERT INTO comics(Filename,ModDate) VALUES(?, ?)",(dbvalues))
+                dbvalues = [NUMROWS, COMICNAME, COMICMOD]
+                CURSOR.execute("INSERT INTO comics(id,Filename,ModDate) VALUES(?, ?)",(dbvalues))
+
+        create_thumbnail(zip_file, MANUAL)
+
+        if MANUAL is True:
+            NUMROWS = NUMROWS + 1
 DB.commit()
 DB.close()
